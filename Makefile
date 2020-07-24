@@ -17,7 +17,8 @@ default: tidy fmt lint build
 
 build: tidb pocket tpcc ledger txn-rand-pessimistic on-dup sqllogic block-writer \
 		region-available deadlock-detector crud bank bank2 abtest cdc-pocket tiflash-pocket vbank \
-		read-stress rawkv-linearizability tiflash-abtest tiflash-cdc dm-pocket follower-read append register
+		read-stress rawkv-linearizability tiflash-abtest tiflash-cdc dm-pocket follower-read append \
+		register pipelined-lock
 
 tidb:
 	$(GOBUILD) $(GOMOD) -o bin/chaos-tidb cmd/tidb/main.go
@@ -108,6 +109,9 @@ follower-read:
 
 titan:
 	$(GOBUILD) $(GOMOD) -o bin/titan cmd/titan/*.go
+
+pipelined-lock:
+	$(GOBUILD) $(GOMOD) -o bin/pipelined-lock cmd/pipelined-lock/*.go
 
 fmt: groupimports
 	go fmt ./...
