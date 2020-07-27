@@ -54,7 +54,7 @@ type plClient struct {
 	wg           sync.WaitGroup
 	stop         int32
 	db           *sql.DB
-	lock         sync.Locker
+	lock         sync.Mutex
 	count        int64
 	success      int64
 	shortCount   int64
