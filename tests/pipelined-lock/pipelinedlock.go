@@ -23,10 +23,11 @@ var (
 	retryLimit        = 200
 )
 
+const stmtDrop = `DROP TABLE IF EXISTS pipelinedlock`
 const stmtCreate = `
 CREATE TABLE IF NOT EXISTS pipelinedlock (
   value BIGINT,
-  PRIMARY KEY (value),
+  PRIMARY KEY (value)
 );
 TRUNCATE TABLE pipelinedlock;
 `
@@ -86,6 +87,11 @@ func (c *plClient) SetUp(ctx context.Context, _ []types.Node, clientNodes []type
 	defer func() {
 		log.Infof("init end...")
 	}()
+
+	if _, err := c.db.Exec(stmtDrop); err != nil {
+		log.Fatalf("execute statement %s error %v", stmtDrop, err)
+	}
+
 	if _, err := c.db.Exec(stmtCreate); err != nil {
 		log.Fatalf("execute statement %s error %v", stmtCreate, err)
 	}
