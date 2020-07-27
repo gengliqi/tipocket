@@ -155,7 +155,7 @@ func (c *plClient) SetUp(ctx context.Context, _ []types.Node, clientNodes []type
 				return
 			case <-time.After(c.Interval):
 				c.lock.Lock()
-				log.Infof("success rate: %v, interval success rate: %v", 1.0*c.success/c.count, c.Interval, 1.0*c.shortSuccess/c.shortCount)
+				log.Infof("success rate: %f, interval success rate: %f", 1.0*c.success/c.count, c.Interval, 1.0*c.shortSuccess/c.shortCount)
 				c.shortCount = 0
 				c.shortSuccess = 0
 				c.lock.Unlock()
