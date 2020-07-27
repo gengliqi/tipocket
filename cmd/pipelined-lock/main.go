@@ -34,6 +34,7 @@ import (
 var (
 	interval    = flag.Duration("interval", 2*time.Second, "check interval")
 	concurrency = flag.Int("concurrency", 200, "concurrency of worker")
+	NumValue    = flag.Int("numvalue", 100000, "num of value")
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 			Concurrency: *concurrency,
 			Interval:    *interval,
 		}},
-		NemesisGens: util.ParseNemesisGenerators(fixture.Context.Nemesis),
+		NemesisGens: util.ParseNemesisGenerators("shuffle-leader-scheduler,shuffle-region-scheduler,random-merge-scheduler"),
 		ClusterDefs: test_infra.NewDefaultCluster(fixture.Context.Namespace, fixture.Context.Namespace,
 			fixture.Context.TiDBClusterConfig),
 	}

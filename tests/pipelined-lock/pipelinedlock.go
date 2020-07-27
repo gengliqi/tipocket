@@ -26,6 +26,7 @@ var (
 const stmtCreate = `
 CREATE TABLE IF NOT EXISTS pipelinedlock (
   value BIGINT,
+  PRIMARY KEY (value),
 );
 TRUNCATE TABLE pipelinedlock;
 `
@@ -33,6 +34,7 @@ TRUNCATE TABLE pipelinedlock;
 type Config struct {
 	Interval    time.Duration `toml:"interval"`
 	Concurrency int           `toml:"concurrency"`
+	NumValue    int           `toml:"numvalue"`
 }
 
 // CaseCreator creates ledgerClient
@@ -88,6 +90,58 @@ func (c *plClient) SetUp(ctx context.Context, _ []types.Node, clientNodes []type
 		log.Fatalf("execute statement %s error %v", stmtCreate, err)
 	}
 
+	var wg sync.WaitGroup
+	type Job struct {
+		value int
+	}
+	ch := make(chan Job)
+	for i := 0; i < insertConcurrency; i++ {
+		wg.Add(1)
+		start := time.Now()
+		go func() {
+			defer wg.Done()
+			for job := range ch {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				query := fmt.Sprintf(`INSERT INTO pipelinedlock VALUES (%v)`, job.value)
+				err := util.RunWithRetry(ctx, retryLimit, 3*time.Second, func() error {
+					_, err := c.db.Exec(query)
+					if util.IsErrDupEntry(err) {
+						return nil
+					}
+					return err
+				})
+
+				if err != nil {
+					log.Fatalf("exec %s err %s", query, err)
+				}
+				log.Infof("insert %d, takes %s", job.value, time.Since(start))
+			}
+		}()
+	}
+
+	var begin, end int
+	for begin = 1; begin <= c.NumValue; begin = end {
+		select {
+		case <-ctx.Done():
+			return nil
+		case ch <- Job{value: begin}:
+		}
+	}
+	close(ch)
+	wg.Wait()
+
+	select {
+	case <-ctx.Done():
+		log.Warnf("plClient initialize is cancel")
+		return nil
+	default:
+	}
+
 	go func() {
 		for {
 			select {
@@ -127,6 +181,7 @@ func (c *plClient) Start(ctx context.Context, cfg interface{}, clientNodes []typ
 	defer func() {
 		log.Infof("test end...")
 	}()
+
 	var wg sync.WaitGroup
 	for i := 0; i < c.Concurrency; i++ {
 		wg.Add(1)
@@ -161,7 +216,7 @@ func (c *plClient) Execute(db *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	query := "update pipelinedlock set value=value+1"
+	query := "update pipelinedlock set value=value+1 where value=1"
 	if _, err := tx.Exec(query); err != nil {
 		return errors.Trace(err)
 	}
